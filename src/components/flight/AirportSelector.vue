@@ -63,8 +63,8 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { PRESET_AIRPORTS, type TdxAirport } from '@/types/tdx'
 
 interface Props {
-  modelValue: string
-  airports?: TdxAirport[]
+  modelValue: string //目前輸入框的文字
+  airports?: TdxAirport[] //搜尋到的機場陣列
   label?: string
   placeholder?: string
 }
@@ -81,6 +81,9 @@ const emit = defineEmits<{
   (e: 'clear'): void
 }>()
 
+/*
+ ** 熱門機場彈窗條件判斷
+ */
 const isFocused = ref(false)
 const containerRef = ref<HTMLDivElement | null>(null)
 
@@ -106,12 +109,14 @@ const selectAirport = (airport: TdxAirport) => {
   isFocused.value = false
 }
 
+//點擊空白處自動關閉選單
 const handleClickOutside = (event: MouseEvent) => {
   if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
     isFocused.value = false
   }
 }
 
+//生命週期管理（防止記憶體洩漏）
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
 })

@@ -4,7 +4,7 @@ import type { TdxAirport, TdxAirline } from '@/types/tdx'
 import type { TdxFlightFids } from '@/types/flight'
 
 export const useFlightStore = defineStore('flight', () => {
-  // 1. 表單當前輸入狀態
+  // 1. 表單輸入狀態：當前input的內容，隨時變換
   const airportQuery = ref('')
   const airlineQuery = ref('')
   const selectedAirport = ref<TdxAirport | null>(null)
@@ -12,12 +12,12 @@ export const useFlightStore = defineStore('flight', () => {
   const formFlightType = ref<'Departure' | 'Arrival'>('Departure')
   const formTimeMode = ref<'upcoming' | 'all'>('upcoming')
 
-  // 2. 按下搜尋後生效的快照狀態
+  // 2. 快照狀態：按下搜尋按鈕後才生效
   const searchedAirport = ref<TdxAirport | null>(null)
   const searchedAirline = ref<TdxAirline | null>(null)
   const searchedTimeMode = ref<'upcoming' | 'all'>('upcoming')
   const hasSearched = ref(false)
-  const rawFlights = ref<TdxFlightFids[]>([])
+  const rawFlights = ref<TdxFlightFids[]>([]) //歷史搜尋到的航班資料
 
   // 3. 重設表單與搜尋狀態
   const clearStore = () => {

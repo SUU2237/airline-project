@@ -1,7 +1,7 @@
 import { computed, type Ref } from 'vue'
 import type { TdxFlightFids, InsuranceClaimItem } from '@/types/flight'
 
-// 💡 測試/展演門檻（預設 5 分鐘即可觸發高亮，正式環境可設為 240）
+// 正式情況 240（分鐘），測試用暫時設定60
 const DELAY_THRESHOLD_MINUTES = 60
 
 export function useInsurance(flights: Ref<TdxFlightFids[]>) {
@@ -23,12 +23,12 @@ export function useInsurance(flights: Ref<TdxFlightFids[]>) {
 
     if (isNaN(scheduleTime) || isNaN(estimatedTime)) return 0
 
-    const diffMinutes = Math.round((estimatedTime - scheduleTime) / (1000 * 60))
+    const diffMinutes = Math.round((estimatedTime - scheduleTime) / (1000 * 60)) //換算分鐘
     return diffMinutes > 0 ? diffMinutes : 0
   }
 
   /**
-   * 檢查單一航班是否符合不便險理賠標準
+   * 檢查單一航班符合哪種理賠
    */
   const checkInsuranceEligibility = (flight: TdxFlightFids): InsuranceClaimItem | null => {
     const delayMinutes = calculateDelayMinutes(flight)
@@ -58,7 +58,7 @@ export function useInsurance(flights: Ref<TdxFlightFids[]>) {
     return null
   }
 
-  // 自動計算目前顯示清單中符合不便險的航班
+  // 篩選出所有符合理賠的航班
   const alertClaimItems = computed<InsuranceClaimItem[]>(() => {
     const list: InsuranceClaimItem[] = []
     for (const flight of flights.value) {

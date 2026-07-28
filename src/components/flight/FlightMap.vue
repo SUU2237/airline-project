@@ -24,6 +24,7 @@ let planeMarker: L.Marker | null = null
 let polylineLayer: L.Polyline | null = null
 let airportMarkers: L.Marker[] = []
 
+//動態角度的小飛機
 const createPlaneIcon = (angle: number = 0) => {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" style="transform: rotate(${angle}deg); transform-origin: center;">
@@ -38,11 +39,12 @@ const createPlaneIcon = (angle: number = 0) => {
   })
 }
 
+//初始化 Leaflet 地圖
 const initMap = () => {
   if (!mapContainer.value) return
 
   mapInstance = L.map(mapContainer.value, {
-    worldCopyJump: true,
+    worldCopyJump: true, //地圖參數：當使用者滑動地圖、跨過世界地圖東經西經邊界時，地圖不會斷掉，大頭針跟線條會自動平滑接上去。
   }).setView([24.5, 121.5], 3)
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -56,15 +58,15 @@ const initMap = () => {
 const updateMapElements = () => {
   if (!mapInstance) return
 
+  //大頭針與舊圖層清理
   airportMarkers.forEach((m) => m.remove())
   airportMarkers = []
-
   if (polylineLayer) polylineLayer.remove()
   if (planeMarker) planeMarker.remove()
 
   // 1. 標註機場標籤
   const depMarker = L.marker([props.depAirport.lat, props.depAirport.lng])
-    .bindPopup(`起飛：${props.depAirport.name}`)
+    .bindPopup(`起飛：${props.depAirport.name}`) //綁定提示文字
     .addTo(mapInstance)
 
   const arrMarker = L.marker([props.arrAirport.lat, props.arrAirport.lng])
@@ -109,10 +111,12 @@ const updateMapElements = () => {
   }
 }
 
+//畫面完全印出來之後才做
 onMounted(() => {
   initMap()
 })
 
+//監聽：當父頁面傳進來的飛機位置，立刻呼叫 updateMapElements() 重新繪製地圖
 watch(
   () => [props.currentPosition, props.path],
   () => {
@@ -121,6 +125,7 @@ watch(
   { deep: true },
 )
 
+//資源釋放
 onBeforeUnmount(() => {
   if (mapInstance) {
     mapInstance.remove()

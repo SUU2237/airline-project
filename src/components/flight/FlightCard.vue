@@ -39,6 +39,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { TdxFlightFids } from '@/types/flight'
+import { useInsurance } from '@/composables/useInsurance'
 
 interface Props {
   flight: TdxFlightFids
@@ -51,19 +52,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const router = useRouter()
 
-const delayMinutes = computed(() => {
-  const scheduleStr = props.flight.ScheduleDepartureTime || props.flight.ScheduleArrivalTime
-  const estimatedStr =
-    props.flight.EstimatedDepartureTime ||
-    props.flight.ActualDepartureTime ||
-    props.flight.EstimatedArrivalTime
-  if (!scheduleStr || !estimatedStr) return 0
-
-  const s = new Date(scheduleStr).getTime()
-  const e = new Date(estimatedStr).getTime()
-  const diff = Math.round((e - s) / (1000 * 60))
-  return diff > 0 ? diff : 0
-})
+// 從useInsurance拿calculateDelayMinutes算delayMinutes
+const { calculateDelayMinutes } = useInsurance(computed(() => [props.flight]))
+const delayMinutes = computed(() => calculateDelayMinutes(props.flight))
 
 const cleanStatusText = computed(() => {
   const rawRemark = props.flight.DepartureRemark || props.flight.ArrivalRemark || ''
@@ -90,16 +81,18 @@ const statusClass = computed(() => {
   return 'normal'
 })
 
+//時間字串裁切
 const formatTime = (timeStr?: string) => {
   if (!timeStr) return '--:--'
   try {
     const date = new Date(timeStr)
-    return date.toTimeString().substring(0, 5)
+    return date.toTimeString().substring(0, 5) //// 截取 "HH:mm"
   } catch {
     return timeStr
   }
 }
 
+//頁面跳轉與參數傳遞
 const goToMap = () => {
   const callsign = `${props.flight.AirlineID}${props.flight.FlightNumber}`
   router.push({
@@ -209,7 +202,7 @@ const goToMap = () => {
 
 .radar-btn {
   width: 100%;
-  margin-top: auto; /* 💡 關鍵：自動向最下方推擠齊平 */
+  margin-top: auto; /* 關鍵：自動向最下方推擠齊平 */
   padding-top: 8px;
   background: #f8fafc;
   border: 1px solid #cbd5e1;

@@ -1,7 +1,7 @@
 <template>
   <main class="map-view-container">
     <header class="page-header">
-      <button type="button" class="back-btn" @click="goBack">← 返回航班動態列表</button>
+      <button type="button" class="back-btn" @click="goBack">← 返回</button>
       <h2>空中雷達與即時航跡</h2>
     </header>
 
@@ -93,7 +93,7 @@ const loadRadarData = async () => {
   if (route.query.dep) depCode.value = route.query.dep as string
   if (route.query.arr) arrCode.value = route.query.arr as string
 
-  // 2. 自動去全球 28,000+ 機場資料庫抓取正確座標與生成軌跡
+  // 2. 去全球 28,000+ 機場資料庫抓取正確座標與生成軌跡
   const {
     path,
     currentPosition: simPos,
@@ -116,6 +116,7 @@ const loadRadarData = async () => {
       { lat: arrAirport.value.lat, lng: arrAirport.value.lng },
     ]
   } else {
+    //系統備案平滑航跡模式
     isSimulated.value = true
     flightPath.value = path
     currentPosition.value = simPos
@@ -125,9 +126,10 @@ const loadRadarData = async () => {
 }
 
 const goBack = () => {
-  router.push('/flights')
+  router.push('/flight')
 }
 
+//當這個地圖頁面載入完成後，立刻自動執行 loadRadarData() 開始抓資料
 onMounted(() => {
   loadRadarData()
 })

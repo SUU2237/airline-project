@@ -1,23 +1,23 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import FlightView from '@/views/FlightView.vue'
-import MapView from '@/views/MapView.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  // 💡 Hash 模式
+  history: createWebHashHistory(),
   routes: [
     {
       path: '/',
-      redirect: '/flights',
+      redirect: '/flight', // 當網址只有根目錄時，自動重導向到航班頁面
     },
     {
-      path: '/flights',
-      name: 'flights',
+      path: '/flight',
+      name: 'flight',
       component: FlightView,
     },
     {
       path: '/map',
       name: 'map',
-      component: MapView,
+      component: () => import('@/views/MapView.vue'),
     },
   ],
 })

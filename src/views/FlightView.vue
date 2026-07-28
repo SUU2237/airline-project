@@ -217,6 +217,7 @@ const formattedAirportTitle = computed(() => {
   return `臺灣 ↔ ${name}`
 })
 
+//避免每打一個字就發一次 API 導致伺服器崩潰
 watch(
   () => store.airportQuery,
   (newVal) => {
@@ -257,18 +258,19 @@ watch(
   },
 )
 
+//搜尋即時航班動態
 const loadFlightData = async () => {
   const targetId = store.selectedAirport
     ? store.selectedAirport.AirportID || store.selectedAirport.AirportCode || 'TPE'
     : 'TPE'
-
+  //使用者當前選好的條件
   store.searchedAirport = store.selectedAirport
   store.searchedAirline = store.selectedAirline
   store.searchedTimeMode = store.formTimeMode
 
-  store.hasSearched = true
-  isLoading.value = true
-  isRateLimited.value = false
+  store.hasSearched = true //控制引導提示<->航班清單
+  isLoading.value = true //控制載入中……
+  isRateLimited.value = false //控制err429警告畫面
   displayLimit.value = 20
 
   try {
@@ -284,18 +286,19 @@ const loadFlightData = async () => {
       isRateLimited.value = true
     }
   } finally {
+    //最後不論成功還是失敗，都一定會執行 finally
     isLoading.value = false
   }
 }
 
 const filteredFlights = computed(() => {
   let list = [...store.rawFlights]
-
+  // 1. 篩選航空公司
   if (store.searchedAirline) {
     const targetCode = store.searchedAirline.AirlineIATA || store.searchedAirline.AirlineID
     list = list.filter((f) => f.AirlineID === targetCode)
   }
-
+  // 2. 篩選特定航班號碼 / 呼號
   if (flightNumberQuery.value.trim()) {
     const query = flightNumberQuery.value.trim().toUpperCase()
     list = list.filter((f) => {
@@ -304,7 +307,7 @@ const filteredFlights = computed(() => {
       return num.includes(query) || combined.includes(query)
     })
   }
-
+  // 3. 篩選時間範圍 (過濾掉 30 分鐘以前的舊航班)
   if (store.searchedTimeMode === 'upcoming') {
     const nowThreshold = Date.now() - 30 * 60 * 1000
     list = list.filter((f) => {
@@ -314,7 +317,7 @@ const filteredFlights = computed(() => {
       return !isNaN(flightTime) && flightTime >= nowThreshold
     })
   }
-
+  // 4. 按出發時間從小到大排序 (timeA - timeB)
   list.sort((a, b) => {
     const timeA = new Date(a.ScheduleDepartureTime || a.ScheduleArrivalTime || 0).getTime()
     const timeB = new Date(b.ScheduleDepartureTime || b.ScheduleArrivalTime || 0).getTime()
@@ -324,6 +327,7 @@ const filteredFlights = computed(() => {
   return list
 })
 
+//顯示前20筆
 const visibleFlights = computed(() => {
   return filteredFlights.value.slice(0, displayLimit.value)
 })
@@ -332,6 +336,8 @@ const loadMore = () => {
   displayLimit.value += 20
 }
 
+//alertClaimItems 與 alertStats 統計數字，直接送進 <InsuranceAlertBoard> 呈現
+//傳回的 checkInsuranceEligibility 則傳給 <FlightCard> 決定要不要亮紅框
 const { checkInsuranceEligibility, alertClaimItems, alertStats } = useInsurance(filteredFlights)
 
 const handleAirportSelect = (airport: TdxAirport) => {

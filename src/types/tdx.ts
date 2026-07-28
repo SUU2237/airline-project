@@ -10,7 +10,7 @@ export interface TdxQueryParams {
 // TDX 機場資料結構 (/v2/Air/Airport)
 export interface TdxAirport {
   AirportID: string
-  AirportCode?: string
+  AirportCode?: string // 部分小型機場或國內線機場缺乏 IATA 國際代碼
   AirportIATA?: string
   AirportName: {
     Zh_tw?: string
@@ -23,7 +23,7 @@ export interface TdxAirport {
 export interface TdxAirline {
   AirlineID: string
   AirlineIATA?: string
-  AirlineICAO?: string
+  AirlineICAO?: string // 國際民航組織代碼
   AirlineName: {
     Zh_tw?: string
     En?: string

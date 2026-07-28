@@ -2,7 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import FlightView from '@/views/FlightView.vue'
 
 const router = createRouter({
-  // 💡 Hash 模式
+  // Hash 模式，網址會帶有 #
   history: createWebHashHistory(),
   routes: [
     {
@@ -17,6 +17,7 @@ const router = createRouter({
     {
       path: '/map',
       name: 'map',
+      //地圖元件只有在使用者真正點擊進入 /map 時才會被下載
       component: () => import('@/views/MapView.vue'),
     },
   ],

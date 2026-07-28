@@ -1,3 +1,5 @@
+//快取與記憶體管理、搜尋與過濾
+
 import tdxClient from './tdxClient'
 import type { TdxAirport, TdxAirline } from '@/types/tdx'
 import type { TdxFlightFids } from '@/types/flight'
@@ -63,7 +65,23 @@ async function searchCacheList<T>(
 }
 
 /**
- *  離站 / 到站 航班 FIDS 通用請求 Helper
+ * 國外機場資料二次過濾 Helper
+ */
+function filterForeignAirport(
+  flights: TdxFlightFids[],
+  targetCleanId: string,
+  isDep: boolean,
+): TdxFlightFids[] {
+  return flights.filter((f) => {
+    const code = isDep
+      ? f.ArrivalAirportID || (f as any).DestinationAirportID || '' // API版本差異
+      : f.DepartureAirportID || (f as any).OriginAirportID || ''
+    return code.toUpperCase() === targetCleanId
+  })
+}
+
+/**
+ * 離站 / 到站 航班 FIDS 通用請求 Helper (重構版)
  */
 async function fetchFlightFids(
   type: 'Departure' | 'Arrival',
@@ -72,64 +90,66 @@ async function fetchFlightFids(
   if (!airportID) return []
   const cleanId = airportID.trim().toUpperCase()
 
-  // 國外機場判定：若搜尋的是國外機場 (如 NRT)，轉為向 TPE (桃園) 查詢
   const isTaiwanAirport = TAIWAN_AIRPORT_IDS.includes(cleanId)
-  const requestTarget = isTaiwanAirport ? cleanId : 'TPE'
+  const isDep = type === 'Departure'
 
-  const cacheKey = `${type === 'Departure' ? 'DEP' : 'ARR'}_${cleanId}`
+  // 如果是國外機場，對 TDX 來說 API 的「離站/到站」型別必須反轉！
+  const actualApiType = isTaiwanAirport ? type : isDep ? 'Arrival' : 'Departure'
+
+  const requestTarget = isTaiwanAirport ? cleanId : 'TPE'
+  const todayStr = new Date().toISOString().split('T')[0]
+
+  // 1. 檢查快取，有就直接return
+  const cacheKey = `${type}_${cleanId}`
   const cached = flightCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    //用「現在時間」減去「當初抓資料的時間」。如果相差小於 60 秒，代表資料還很新鮮，直接回傳暫存檔，不浪費 API 額度！
     return cached.data
   }
 
-  const todayStr = new Date().toISOString().split('T')[0]
-  const isDep = type === 'Departure'
+  // 2. 發送 API 請求 (使用反轉後的 actualApiType)
+  const executeApiCall = async (top: number) => {
+    const filterTimeField =
+      actualApiType === 'Departure' ? 'ScheduleDepartureTime' : 'ScheduleArrivalTime'
 
-  // 通用發送請求邏輯
-  const doRequest = async (top: number) => {
     const res = await tdxClient.get<unknown, TdxFlightFids[]>(
-      `/v2/Air/FIDS/Airport/${type}/${requestTarget}`,
+      `/v2/Air/FIDS/Airport/${actualApiType}/${requestTarget}`,
       {
         params: {
           $top: top,
-          $filter: `${isDep ? 'ScheduleDepartureTime' : 'ScheduleArrivalTime'} ge ${todayStr}`, // 過濾掉今天以前的資料（ge 代表大於等於今日）
+          $filter: `${filterTimeField} ge ${todayStr}`,
         },
       },
     )
-    let result = Array.isArray(res) ? res : []
-
-    // 如果使用者原本查的是「國外機場 (如 NRT)」，在此做二次篩選
-    if (!isTaiwanAirport) {
-      result = result.filter((f) => {
-        const code = isDep
-          ? f.ArrivalAirportID || (f as any).DestinationAirportID || '' //API版本差所以有兩種目的地寫法==
-          : f.DepartureAirportID || (f as any).OriginAirportID || ''
-        return code.toUpperCase() === cleanId
-      })
-    }
-    return result
+    return Array.isArray(res) ? res : []
   }
 
+  let rawFlights: TdxFlightFids[] = []
   try {
-    const result = await doRequest(1000)
-    flightCache.set(cacheKey, { data: result, timestamp: Date.now() })
-    return result
+    rawFlights = await executeApiCall(1000) //抓1000筆
   } catch (err: any) {
     if (err?.response?.status === 500 || err?.status === 500) {
-      // Server Error
       console.warn(`[TDX Warning] ${requestTarget} 請求 500 錯誤，降級重試...`)
-      // 降級重試：把原本請求的 $top: 1000 改為 $top: 300
-      try {
-        const fallbackResult = await doRequest(300)
-        flightCache.set(cacheKey, { data: fallbackResult, timestamp: Date.now() })
-        return fallbackResult
-      } catch (fallbackErr) {
-        throw fallbackErr
-      }
+      rawFlights = await executeApiCall(300)
+    } else {
+      throw err
     }
-    throw err
   }
+
+  // 3. 資料加工：若為國外機場，做過濾
+  let finalResult = rawFlights
+  if (!isTaiwanAirport) {
+    finalResult = rawFlights.filter((f) => {
+      // 因為 API 型別反轉了，所以要判斷要看的是「出發地」還是「目的地」
+      const code = isDep
+        ? f.DepartureAirportID || (f as any).OriginAirportID || ''
+        : f.ArrivalAirportID || (f as any).DestinationAirportID || ''
+      //符合該機場的資料被放行
+      return code.toUpperCase() === cleanId
+    })
+  }
+
+  flightCache.set(cacheKey, { data: finalResult, timestamp: Date.now() })
+  return finalResult
 }
 
 export const tdxService = {
@@ -140,7 +160,7 @@ export const tdxService = {
       () =>
         tdxClient.get<unknown, TdxAirport[]>('/v2/Air/Airport', {
           // unknown：代表發送 GET 請求時，不帶任何 Body 請求資料（因為是 GET，所以 Body 型別未知/不需要）。
-          params: { $top: 1000 }, // TdxAirport[]：代表預期伺服器回傳的 Response 資料結構是一個 TdxAirport 陣列
+          params: { $top: 1000 },
         }),
       (data) => (airportsCache = data),
       keyword,

@@ -1,3 +1,5 @@
+//伺服器連線、驗證token發送與基礎 Header 設定
+
 import axios, {
   type AxiosInstance,
   type AxiosResponse,

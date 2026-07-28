@@ -205,6 +205,7 @@ const flightNumberQuery = ref('')
 let airportTimer: number | undefined
 let airlineTimer: number | undefined
 
+//根據使用者搜尋的機場，動態生成要在畫面上顯示的標題文字
 const formattedAirportTitle = computed(() => {
   if (!store.searchedAirport) return ''
   const code = store.searchedAirport.AirportCode || store.searchedAirport.AirportID || ''
@@ -214,6 +215,7 @@ const formattedAirportTitle = computed(() => {
   if (taiwanCodes.includes(code.toUpperCase())) {
     return name
   }
+  //國外機場顯示
   return `臺灣 ↔ ${name}`
 })
 
@@ -228,10 +230,12 @@ watch(
       store.selectedAirport = null
     }
     clearTimeout(airportTimer)
+    //搜尋框完全沒字時，立刻把選單清空並直接結束，不浪費 API 額度去搜尋空字串
     if (!newVal.trim()) {
       airports.value = []
       return
     }
+    //超過0.3秒沒再打字才去抓資料
     airportTimer = window.setTimeout(async () => {
       airports.value = await tdxService.getAirports(newVal, 30)
     }, 300)

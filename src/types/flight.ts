@@ -6,7 +6,7 @@ export type FlightFIDSItem = TdxFlightFids
 // TDX FIDS 航班即時動態資料結構 (依據 TDX 官方 Schema)
 export interface TdxFlightFids {
   FlightNumber: string
-  AirlineID: string // 👈 官方標準：小寫 l
+  AirlineID: string
   Airline?: TdxAirline
   DepartureAirportID: string
   ArrivalAirportID: string
@@ -44,7 +44,7 @@ export interface OpenSkyState {
   onGround: boolean
 }
 
-// 💡 地圖軌跡點位型別
+// 地圖軌跡點位型別
 export interface FlightPathPoint {
   lat: number
   lng: number

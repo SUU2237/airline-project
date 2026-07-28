@@ -7,7 +7,20 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import L from 'leaflet'
+import 'leaflet/dist/leaflet.css' // 確保有載入 CSS
 import type { OpenSkyState, FlightPathPoint } from '@/types/flight'
+
+// 修正 Vite/Webpack 打包時 Leaflet 預設 Marker 圖片遺失問題
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+})
 
 interface Props {
   currentPosition: OpenSkyState | null

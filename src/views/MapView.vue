@@ -53,7 +53,7 @@
 
       <FlightMap
         v-else
-        :current-position="currentPosition"
+        :current-position="mapCurrentPosition"
         :path="flightPath"
         :dep-airport="depAirport"
         :arr-airport="arrAirport"
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FlightMap from '@/components/flight/FlightMap.vue'
 import { openSkyService, getAirportCoordinates } from '@/api/openSkyService'
@@ -75,6 +75,7 @@ const router = useRouter()
 const currentCallsign = ref<string>('CI123')
 const depCode = ref<string>('TPE')
 const arrCode = ref<string>('NRT')
+const flightStatus = ref<string>('') // 接收傳過來的航班狀態
 
 const currentPosition = ref<OpenSkyState | null>(null)
 const flightPath = ref<FlightPathPoint[]>([])
@@ -85,6 +86,21 @@ const isLoading = ref(true)
 const depAirport = ref({ lat: 25.0797, lng: 121.2342, name: '桃園國際機場' })
 const arrAirport = ref({ lat: 35.772, lng: 140.3929, name: '東京成田機場' })
 
+// 判斷：只有包含「出發」、「起飛」、「飛進/飛往」等字的航班才算「飛行中」！
+const isInFlight = computed(() => {
+  const st = flightStatus.value.trim()
+  return st.includes('出發') || st.includes('起飛') || st.includes('順暢') || st.includes('延誤')
+})
+
+// 如果「不是飛行中」（即：取消、已到站/落地、未起飛/準點/預定），隱藏地圖小飛機！
+const mapCurrentPosition = computed(() => {
+  if (!isInFlight.value) {
+    return null
+  }
+  return currentPosition.value
+})
+
+//載入地圖
 const loadRadarData = async () => {
   isLoading.value = true
 
@@ -92,6 +108,7 @@ const loadRadarData = async () => {
   if (route.query.callsign) currentCallsign.value = route.query.callsign as string
   if (route.query.dep) depCode.value = route.query.dep as string
   if (route.query.arr) arrCode.value = route.query.arr as string
+  if (route.query.remark) flightStatus.value = route.query.remark as string
 
   // 2. 去全球 28,000+ 機場資料庫抓取正確座標與生成軌跡
   const {
@@ -119,7 +136,12 @@ const loadRadarData = async () => {
     //系統備案平滑航跡模式
     isSimulated.value = true
     flightPath.value = path
-    currentPosition.value = simPos
+    // 如果「不是飛行中」（取消、已落地、未起飛），將座標與數據設為 null
+    if (!isInFlight.value) {
+      currentPosition.value = null // 清空！畫面上就會顯示 '--'
+    } else {
+      currentPosition.value = simPos // 只有確定在飛的航班，才套用模擬數值
+    }
   }
 
   isLoading.value = false

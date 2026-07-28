@@ -29,7 +29,7 @@
         </p>
       </div>
 
-      <!-- 💡 使用 margin-top: auto 使按鈕永遠齊平貼齊底部 -->
+      <!-- 使用 margin-top: auto 使按鈕永遠齊平貼齊底部 -->
       <button type="button" class="radar-btn" @click="goToMap">查看空中即時雷達</button>
     </div>
   </div>
@@ -95,12 +95,16 @@ const formatTime = (timeStr?: string) => {
 //頁面跳轉與參數傳遞
 const goToMap = () => {
   const callsign = `${props.flight.AirlineID}${props.flight.FlightNumber}`
+  const status = cleanStatusText.value
+  const remark = props.flight.DepartureRemark || props.flight.ArrivalRemark || ''
   router.push({
     path: '/map',
     query: {
       callsign,
       dep: props.flight.DepartureAirportID,
       arr: props.flight.ArrivalAirportID,
+      status,
+      remark,
     },
   })
 }

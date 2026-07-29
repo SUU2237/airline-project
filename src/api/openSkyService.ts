@@ -159,7 +159,7 @@ export const openSkyService = {
       trueTrack,
       onGround: false,
     }
-
+    //回傳給 MapView.vue
     return { path, currentPosition, dep, arr }
   },
 }

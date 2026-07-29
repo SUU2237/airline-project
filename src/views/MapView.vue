@@ -89,7 +89,13 @@ const arrAirport = ref({ lat: 35.772, lng: 140.3929, name: '東京成田機場' 
 // 判斷：只有包含「出發」、「起飛」、「飛進/飛往」等字的航班才算「飛行中」！
 const isInFlight = computed(() => {
   const st = flightStatus.value.trim()
-  return st.includes('出發') || st.includes('起飛') || st.includes('順暢') || st.includes('延誤')
+  return (
+    st.includes('出發') ||
+    st.includes('起飛') ||
+    st.includes('順暢') ||
+    st.includes('延誤') ||
+    st.includes('準時')
+  )
 })
 
 // 如果「不是飛行中」（即：取消、已到站/落地、未起飛/準點/預定），隱藏地圖小飛機！

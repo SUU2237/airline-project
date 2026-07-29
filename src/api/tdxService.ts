@@ -58,7 +58,7 @@ async function searchCacheList<T>(
   return cache
     .filter(
       (item) =>
-        //把所有文字欄位抓出來組成一個小陣列
+        //把每一個機場的 ID 與名稱等抓出來組成一個小陣列，比對陣列裡有沒有包含keyword
         getFields(item).some((f) => f?.toString().toLowerCase().includes(trimmed.toLowerCase())), //防爆：如果有這個屬性才繼續往下讀取；沒有的話就直接回傳 undefined，不要報錯崩潰
     )
     .slice(0, top)
@@ -95,18 +95,18 @@ async function fetchFlightFids(
 
   // 如果是國外機場，對 TDX 來說 API 的「離站/到站」型別必須反轉！
   const actualApiType = isTaiwanAirport ? type : isDep ? 'Arrival' : 'Departure'
-
+  //是國外機場就查TPE
   const requestTarget = isTaiwanAirport ? cleanId : 'TPE'
   const todayStr = new Date().toISOString().split('T')[0]
 
-  // 1. 檢查快取，有就直接return
+  // 1. 檢查快取，60 秒內查過同一個機場/航空，有就直接return
   const cacheKey = `${type}_${cleanId}`
   const cached = flightCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data
   }
 
-  // 2. 發送 API 請求 (使用反轉後的 actualApiType)
+  //API工具
   const executeApiCall = async (top: number) => {
     const filterTimeField =
       actualApiType === 'Departure' ? 'ScheduleDepartureTime' : 'ScheduleArrivalTime'
@@ -123,6 +123,8 @@ async function fetchFlightFids(
     return Array.isArray(res) ? res : []
   }
 
+  // 2. 發送 API 請求 (國外機場使用反轉後的 actualApiType)
+  //減少資料數量重試
   let rawFlights: TdxFlightFids[] = []
   try {
     rawFlights = await executeApiCall(1000) //抓1000筆
@@ -148,6 +150,7 @@ async function fetchFlightFids(
     })
   }
 
+  // 4. 寫入快取並回傳
   flightCache.set(cacheKey, { data: finalResult, timestamp: Date.now() })
   return finalResult
 }

@@ -223,6 +223,7 @@ const formattedAirportTitle = computed(() => {
 watch(
   () => store.airportQuery,
   (newVal) => {
+    //當使用者動手修改或刪除搜尋框裡的字時，自動取消原本已經選好的機場物件（解除鎖定）
     if (
       store.selectedAirport &&
       newVal !== (store.selectedAirport.AirportName?.Zh_tw || store.selectedAirport.AirportID)
@@ -296,7 +297,7 @@ const loadFlightData = async () => {
 }
 
 const filteredFlights = computed(() => {
-  let list = [...store.rawFlights]
+  let list = [...store.rawFlights] //複製一份，建立一個全新的陣列list
   // 1. 篩選航空公司
   if (store.searchedAirline) {
     const targetCode = store.searchedAirline.AirlineIATA || store.searchedAirline.AirlineID

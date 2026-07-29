@@ -93,14 +93,14 @@ const updateMapElements = () => {
     const latLngs: [number, number][] = props.path
       .filter((p): p is FlightPathPoint => !!p)
       .map((p) => [p.lat, p.lng])
-
+    //畫虛綫
     polylineLayer = L.polyline(latLngs, {
       color: '#3b82f6',
       weight: 3,
       dashArray: '6, 6',
       opacity: 0.85,
     }).addTo(mapInstance)
-
+    //自動縮放地圖視野
     try {
       const bounds = polylineLayer.getBounds()
       if (bounds.isValid()) {
@@ -129,7 +129,7 @@ onMounted(() => {
   initMap()
 })
 
-//監聽：當父頁面傳進來的飛機位置，立刻呼叫 updateMapElements() 重新繪製地圖
+//監聽：當 MapView 發生改變，立刻呼叫 updateMapElements() 重新繪製地圖
 watch(
   () => [props.currentPosition, props.path],
   () => {
